@@ -7,11 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -22,7 +23,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',             // Thêm cột phân quyền (admin, member)
         'membership_tier',  // Thêm cột hạng thành viên (standard, gold...)
     ];
 
@@ -59,8 +59,8 @@ class User extends Authenticatable
         return $this->hasMany(Booking::class);
     }
     public function roles()
-{
-    // Một User có nhiều Role thông qua bảng trung gian role_user
-    return $this->belongsToMany(Role::class);
-}
+    {
+        // Một User có nhiều Role thông qua bảng trung gian role_user
+        return $this->belongsToMany(Role::class);
+    }
 }

@@ -38,4 +38,13 @@ class Booking extends Model
                     ->withPivot('quantity', 'price_at_purchase')
                     ->withTimestamps();
     }
+
+    /**
+     * A Booking has one Payment record.
+     * Booking (1) → Payment (1)
+     */
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
+    }
 }

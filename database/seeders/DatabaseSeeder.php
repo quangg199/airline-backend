@@ -54,5 +54,8 @@ class DatabaseSeeder extends Seeder
         // 6. TẠO 50 CHUYẾN BAY MẪU
         // Lưu ý: FlightFactory cần có aircraft_id để không bị lỗi khóa ngoại
         Flight::factory(50)->create();
+
+        // 7. TẠO 20 BOOKING MẪU (Dùng BookingFactory)
+        \App\Models\Booking::factory(20)->create();
     }
 }
