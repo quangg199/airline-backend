@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\FlightController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,7 @@ use App\Http\Controllers\Api\BookingController;
 // -------------------------------------------------------------------------
 Route::get('/airports', [AirportController::class, 'index']);
 Route::get('/flights',  [FlightController::class,  'index']);
+Route::get('/flights/{id}/seats', [FlightController::class, 'seats']);
 Route::get('/services', [ServiceController::class, 'index']);
 
 // -------------------------------------------------------------------------
@@ -48,13 +50,12 @@ Route::prefix('auth')->group(function () {
 
 // -------------------------------------------------------------------------
 // TIER 3: MEMBER-PROTECTED ROUTES
-// Requires: Valid Sanctum Bearer token.
-// Any authenticated user (member or admin) can access these.
-// -------------------------------------------------------------------------
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/bookings',       [BookingController::class, 'index']);
-    Route::post('/bookings',      [BookingController::class, 'store']);
-    Route::get('/bookings/{id}',  [BookingController::class, 'show']);
+    Route::get('/bookings',               [BookingController::class, 'index']);
+    Route::post('/bookings/lock-seat',    [BookingController::class, 'lockSeat']);
+    Route::post('/bookings',              [BookingController::class, 'store']);
+    Route::post('/bookings/pay',          [PaymentController::class, 'pay']);
+    Route::get('/bookings/{id}',          [BookingController::class, 'show']);
 });
 
 // -------------------------------------------------------------------------

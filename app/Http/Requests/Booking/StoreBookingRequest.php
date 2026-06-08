@@ -44,6 +44,7 @@ class StoreBookingRequest extends BaseApiRequest
     {
         return [
             'flight_id'        => ['required', 'integer', 'exists:flights,id'],
+            'return_flight_id' => ['nullable', 'integer', 'exists:flights,id'],
             'passenger_name'   => ['required', 'string', 'max:255'],
             'identity_number'  => ['required', 'string', 'max:50'],
             'service_ids'      => ['nullable', 'array'],
@@ -58,9 +59,11 @@ class StoreBookingRequest extends BaseApiRequest
     public function messages(): array
     {
         return [
-            'flight_id.required'       => 'Vui lòng chọn chuyến bay.',
+            'flight_id.required'       => 'Vui lòng chọn chuyến bay đi.',
             'flight_id.integer'        => 'Mã chuyến bay không hợp lệ.',
-            'flight_id.exists'         => 'Chuyến bay được chọn không tồn tại trong hệ thống.',
+            'flight_id.exists'         => 'Chuyến bay đi không tồn tại.',
+            'return_flight_id.integer' => 'Mã chuyến bay về không hợp lệ.',
+            'return_flight_id.exists'  => 'Chuyến bay về không tồn tại.',
             'passenger_name.required'  => 'Tên hành khách là bắt buộc.',
             'passenger_name.max'       => 'Tên hành khách không được vượt quá 255 ký tự.',
             'identity_number.required' => 'Số CCCD/Hộ chiếu là bắt buộc.',
