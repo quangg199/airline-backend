@@ -12,87 +12,84 @@ use Illuminate\Support\Facades\DB;
 /**
  * FlightGeneratorService (Factory / Generator — Creational)
  *
- * Chịu trách nhiệm duy nhất: Sinh (generate) các chuyến bay giả lập
- * cho một tuyến đường + ngày cụ thể khi chưa có dữ liệu trong DB.
- *
  * Vấn đề giải quyết (Problem-First):
  * ─────────────────────────────────
- * Khi user tìm kiếm tuyến HAN → SGN ngày 2026-07-20 nhưng DB chưa có
- * chuyến bay nào cho ngày đó → kết quả trống → trải nghiệm xấu.
+ * Yêu cầu business: Mỗi lần tìm kiếm cho 1 tuyến + ngày phải trả về
+ * ĐÚNG 15 chuyến bay: 3 hãng × 5 khung giờ, mã số cố định, nhất quán.
  *
- * Giải pháp: On-Demand Generation
- * ─────────────────────────────────
- * Tự động tạo 5 chuyến bay với các khung giờ cố định (sáng, trưa, chiều, tối)
- * rồi PERSIST vào DB, đảm bảo:
- * 1. Dữ liệu nhất quán khi user refresh trang.
- * 2. Các user khác cùng tuyến+ngày thấy cùng kết quả.
- * 3. Mọi thao tác insert đều nằm trong DB::transaction() → ACID compliance.
- *
- * Race condition prevention:
- * ─────────────────────────
- * Double-check pattern: Kiểm tra lại sự tồn tại của flights BÊN TRONG
- * transaction, phòng trường hợp 2 request đồng thời cùng thấy "không có
- * chuyến bay" và cùng cố tạo → tránh duplicate.
+ * Giải pháp: Deterministic Generation
+ * ─────────────────────────────────────
+ * Thay vì random prefix + random number, ta dùng bảng cố định AIRLINE_SCHEDULES
+ * chứa đầy đủ thông tin từng hãng: tên, prefix, 5 số hiệu chuyến bay, 5 khung giờ.
+ * → Cùng tuyến + ngày luôn cho ra 15 chuyến bay giống nhau (idempotent).
  *
  * SOLID Compliance:
- * - SRP : Chỉ lo việc tạo flight data. Không biết gì về pricing hay search.
- * - OCP : Thêm khung giờ mới → sửa TIME_SLOTS constant, không sửa logic.
+ * - SRP : Chỉ lo việc tạo flight data.
+ * - OCP : Thêm hãng mới → thêm entry vào AIRLINE_SCHEDULES, không sửa logic.
  */
 class FlightGeneratorService
 {
     /**
-     * Các khung giờ bay cố định (HH:MM) cho chuyến bay được sinh tự động.
-     * 5 slots phủ đều cả ngày: sáng sớm, sáng, trưa, chiều, tối.
+     * Bảng lịch bay cố định theo hãng.
+     * Mỗi hãng có:
+     *  - name      : Tên hiển thị đầy đủ
+     *  - prefix    : Prefix mã hiệu chuyến bay (để FlightCard nhận diện màu sắc)
+     *  - baseNumbers : 5 số hiệu gốc (sẽ được gắn suffix ngày để tránh unique constraint)
+     *  - slots     : 5 khung giờ tương ứng theo thứ tự [HH:MM]
+     *  - duration  : Thời gian bay (phút) — cố định theo hãng
+     *  - prices    : Giá gốc tương ứng (VND, làm tròn 100K)
+     *
+     * Lý do dùng baseNumbers + suffix ngày:
+     *   flight_number là UNIQUE trong toàn bảng flights.
+     *   Cùng hãng, cùng số hiệu nhưng khác ngày/tuyến → cần key khác nhau.
+     *   VD: VN201-0720 (20/07) ≠ VN201-0715 (15/07)
      */
-    private const TIME_SLOTS = [
-        '06:00',  // Sáng sớm   — Early morning
-        '09:30',  // Giữa sáng  — Mid-morning
-        '13:00',  // Đầu chiều  — Early afternoon
-        '16:30',  // Chiều muộn — Late afternoon
-        '20:00',  // Tối        — Evening
+    private const AIRLINE_SCHEDULES = [
+        [
+            'name'        => 'Vietnam Airlines',
+            'prefix'      => 'VN',
+            'baseNumbers' => ['201', '202', '203', '204', '205'],
+            'slots'       => ['06:00', '09:00', '12:30', '15:45', '19:00'],
+            'duration'    => 115, // 1h55
+            'prices'      => [1200000, 1500000, 1300000, 1400000, 1100000],
+            'aircraft'    => ['model' => 'Boeing 787', 'tail' => 'VN-B787']
+        ],
+        [
+            'name'        => 'VietJet Air',
+            'prefix'      => 'VJ',
+            'baseNumbers' => ['301', '302', '303', '304', '305'],
+            'slots'       => ['07:00', '10:30', '13:00', '16:00', '20:00'],
+            'duration'    => 120, // 2h00
+            'prices'      => [900000, 1100000, 950000, 1000000, 800000],
+            'aircraft'    => ['model' => 'Airbus A320neo', 'tail' => 'VJ-A320']
+        ],
+        [
+            'name'        => 'FlightBus',
+            'prefix'      => 'FB',
+            'baseNumbers' => ['401', '402', '403', '404', '405'],
+            'slots'       => ['05:30', '08:30', '11:30', '14:00', '17:30'],
+            'duration'    => 125, // 2h05
+            'prices'      => [700000, 850000, 750000, 800000, 650000],
+            'aircraft'    => ['model' => 'Embraer 190', 'tail' => 'FB-E190']
+        ],
     ];
 
     /**
-     * Khoảng giá gốc (VND) — phản ánh thực tế giá vé nội địa Việt Nam.
-     * Giá sẽ được làm tròn theo bội số 100,000 VND.
-     */
-    private const MIN_PRICE = 800000;   // 800K VND
-    private const MAX_PRICE = 3500000;  // 3.5M VND
-
-    /**
-     * Khoảng thời gian bay nội địa (phút).
-     * VD: HAN → SGN ≈ 2h05, HAN → DAD ≈ 1h15.
-     */
-    private const MIN_DURATION_MINUTES = 75;   // 1h15
-    private const MAX_DURATION_MINUTES = 150;  // 2h30
-
-    /**
-     * Prefix mã hãng hàng không giả lập.
-     * Mảng để tạo sự đa dạng cho flight_number.
-     */
-    private const AIRLINE_PREFIXES = ['SK', 'VN', 'VJ', 'QH'];
-
-    /**
-     * Sinh 5 chuyến bay cho tuyến đường + ngày được chỉ định.
+     * Sinh đúng 15 chuyến bay cho tuyến đường + ngày được chỉ định.
      *
-     * TOÀN BỘ thao tác được bọc trong DB::transaction():
-     * - Nếu bất kỳ insert nào fail → rollback tất cả → DB sạch.
-     * - Pessimistic approach: double-check existence trong transaction.
+     * Idempotent: Gọi nhiều lần với cùng params → cùng kết quả.
+     * Double-check: Kiểm tra bên trong transaction để tránh race condition.
      *
-     * @param  Airport  $departure  Sân bay khởi hành (đã resolve từ mã IATA).
-     * @param  Airport  $arrival    Sân bay đến (đã resolve từ mã IATA).
-     * @param  string   $date       Ngày khởi hành (format: YYYY-MM-DD).
-     * @return Collection<Flight>   Collection gồm 5 Flight đã tạo, kèm relationships.
+     * @param  Airport  $departure  Sân bay khởi hành.
+     * @param  Airport  $arrival    Sân bay đến.
+     * @param  string   $date       Ngày khởi hành (YYYY-MM-DD).
+     * @return Collection<Flight>   15 Flight đã tạo kèm relationships.
      */
     public function generate(Airport $departure, Airport $arrival, string $date): Collection
     {
         return DB::transaction(function () use ($departure, $arrival, $date) {
 
-            // ── Double-check trong transaction ──────────────────────
-            // Phòng race condition: 2 request đồng thời cùng thấy
-            // "chưa có chuyến bay" → cùng gọi generate().
-            // Check lần 2 bên trong transaction đảm bảo chỉ 1 request
-            // thực sự tạo data, request kia trả về data đã được tạo.
+            // Double-check trong transaction — tránh race condition
             $existing = Flight::where('departure_airport_id', $departure->id)
                 ->where('arrival_airport_id', $arrival->id)
                 ->whereDate('departure_time', $date)
@@ -103,63 +100,68 @@ class FlightGeneratorService
                 return $existing;
             }
 
-            // ── Lấy ngẫu nhiên 1 Aircraft để gán cho các chuyến bay ──
-            // Trong production thực tế, mỗi chuyến bay sẽ có aircraft
-            // riêng dựa trên scheduling, nhưng ở đây dùng random để demo.
-            $aircraft = Aircraft::inRandomOrder()->first();
-
-            if (!$aircraft) {
-                // Không có máy bay trong DB → không thể tạo chuyến bay
-                return collect();
+            // Lấy hoặc tạo Aircraft riêng cho mỗi hãng
+            $aircrafts = [];
+            foreach (self::AIRLINE_SCHEDULES as $airline) {
+                $aircrafts[$airline['prefix']] = Aircraft::firstOrCreate(
+                    ['tail_number' => $airline['aircraft']['tail']],
+                    ['model' => $airline['aircraft']['model'], 'status' => 1]
+                );
             }
+
+            // Suffix ngày: MMDD — đảm bảo flight_number global unique
+            // VD: VN201-0715 (ngày 15/07), VN201-0720 (ngày 20/07)
+            $dateSuffix = Carbon::parse($date)->format('md');
 
             $flightIds = [];
 
-            // ── Tạo 1 chuyến bay cho mỗi khung giờ ────────────────
-            foreach (self::TIME_SLOTS as $index => $timeSlot) {
+            // Sinh 3 hãng × 5 chuyến = 15 flights
+            foreach (self::AIRLINE_SCHEDULES as $airline) {
+                foreach ($airline['baseNumbers'] as $idx => $baseNum) {
+                    // Mã chuyến bay: PREFIX + baseNum + "-" + MMDD
+                    // VD: VN201-0715, VJ301-0715, FB401-0715
+                    $flightNumber  = $airline['prefix'] . $baseNum . '-' . $dateSuffix;
+                    $timeSlot      = $airline['slots'][$idx];
+                    $departureTime = Carbon::parse("{$date} {$timeSlot}");
+                    $arrivalTime   = $departureTime->copy()->addMinutes($airline['duration']);
 
-                // Parse ngày + giờ thành Carbon instance
-                $departureTime = Carbon::parse("{$date} {$timeSlot}");
+                    // Kiểm tra không trùng flight_number (unique constraint)
+                    $alreadyExists = Flight::where('flight_number', $flightNumber)
+                        ->whereDate('departure_time', $date)
+                        ->exists();
 
-                // Thời gian bay ngẫu nhiên trong khoảng hợp lý
-                $durationMinutes = rand(
-                    self::MIN_DURATION_MINUTES,
-                    self::MAX_DURATION_MINUTES
-                );
-                $arrivalTime = $departureTime->copy()->addMinutes($durationMinutes);
+                    if ($alreadyExists) {
+                        // Lấy ID của flight đã tồn tại để include vào kết quả
+                        $existingId = Flight::where('flight_number', $flightNumber)
+                            ->whereDate('departure_time', $date)
+                            ->value('id');
+                        if ($existingId) {
+                            $flightIds[] = $existingId;
+                        }
+                        continue;
+                    }
 
-                // Sinh mã chuyến bay: VD "SK142", "VN307"
-                // Dùng prefix ngẫu nhiên + số 3 chữ số duy nhất theo index
-                $prefix       = self::AIRLINE_PREFIXES[array_rand(self::AIRLINE_PREFIXES)];
-                $flightNumber = $prefix . rand(100, 999);
+                    $flight = Flight::create([
+                        'flight_number'        => $flightNumber,
+                        'departure_airport_id' => $departure->id,
+                        'arrival_airport_id'   => $arrival->id,
+                        'departure_time'       => $departureTime,
+                        'arrival_time'         => $arrivalTime,
+                        'aircraft_id'          => $aircrafts[$airline['prefix']]->id,
+                        // Giá random từ 500,000đ đến 1,500,000đ (bước giá 10k)
+                        'base_price'           => rand(50, 150) * 10000,
+                        'available_seats'      => 180,
+                        'status'               => 'scheduled',
+                    ]);
 
-                // Giá gốc ngẫu nhiên, làm tròn theo bội số 100,000 VND
-                // VD: rand(8, 35) * 100000 → 800,000 ~ 3,500,000
-                $basePrice = rand(
-                    (int) (self::MIN_PRICE / 100000),
-                    (int) (self::MAX_PRICE / 100000)
-                ) * 100000;
-
-                $flight = Flight::create([
-                    'flight_number'        => $flightNumber,
-                    'departure_airport_id' => $departure->id,
-                    'arrival_airport_id'   => $arrival->id,
-                    'departure_time'       => $departureTime,
-                    'arrival_time'         => $arrivalTime,
-                    'aircraft_id'          => $aircraft->id,
-                    'base_price'           => $basePrice,
-                    'available_seats'      => 180,
-                    'status'               => 'scheduled',
-                ]);
-
-                $flightIds[] = $flight->id;
+                    $flightIds[] = $flight->id;
+                }
             }
 
-            // Re-query để lấy Eloquent Collection với relationships eager-loaded.
-            // collect()->push() trả về base Collection (không có ->load()),
-            // nhưng Flight::whereIn()->get() trả về Eloquent Collection đúng chuẩn.
+            // Re-query với Eager Loading đầy đủ
             return Flight::whereIn('id', $flightIds)
                 ->with(['departureAirport', 'arrivalAirport', 'aircraft'])
+                ->orderBy('departure_time')
                 ->get();
         });
     }
