@@ -27,6 +27,14 @@ class User extends Authenticatable
     ];
 
     /**
+     * Các thuộc tính tự động tính toán (Accessors) sẽ được serialize theo JSON API
+     */
+    protected $appends = [
+        'business_class_ticket_count',
+        'is_vip',
+    ];
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>
@@ -62,5 +70,29 @@ class User extends Authenticatable
     {
         // Một User có nhiều Role thông qua bảng trung gian role_user
         return $this->belongsToMany(Role::class);
+    }
+
+    /**
+     * Đếm số lượng vé Hạng Thương Gia (business class) mà User đã thanh toán thành công.
+     */
+    public function getBusinessClassTicketCountAttribute()
+    {
+        return \App\Models\Ticket::whereHas('booking', function ($query) {
+                // Đếm các booking của user này và có trạng thái hợp lệ (VD: paid)
+                $query->where('user_id', $this->id)
+                      ->where('status', 'paid');
+            })
+            ->whereHas('seat', function ($query) {
+                $query->whereIn('seat_class', ['business', '2', 2]);
+            })
+            ->count();
+    }
+
+    /**
+     * Khách hàng là VIP nếu có >= 5 vé thương gia.
+     */
+    public function getIsVipAttribute()
+    {
+        return $this->business_class_ticket_count >= 5;
     }
 }
