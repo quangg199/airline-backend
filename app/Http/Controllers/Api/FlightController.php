@@ -125,10 +125,17 @@ class FlightController extends Controller
         // Tất cả ghế của máy bay này
         $seats = Seat::where('aircraft_id', $flight->aircraft_id)->get();
 
-        // Những ghế đã bị khóa trong Database (có vé nối với booking đang pending hoặc paid)
+        // Những ghế đã bị khóa trong Database (có vé nối với booking đang pending còn hạn hoặc đã paid)
         $lockedSeatIdsDb = \App\Models\Ticket::where('flight_id', $id)
             ->whereHas('booking', function ($query) {
-                $query->whereIn('status', ['pending', 'paid']);
+                $query->where('status', 'paid')
+                      ->orWhere(function ($q) {
+                          $q->where('status', 'pending')
+                            ->where(function ($subQ) {
+                                $subQ->whereNull('expires_at')
+                                     ->orWhere('expires_at', '>', now());
+                            });
+                      });
             })
             ->pluck('seat_id')
             ->toArray();
