@@ -14,7 +14,8 @@ class Booking extends Model
         'flight_id',
         'pnr_code',
         'total_amount',
-        'status'
+        'status',
+        'expires_at'
     ];
 
     public function user()

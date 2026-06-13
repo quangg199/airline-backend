@@ -55,6 +55,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings/lock-seat',    [BookingController::class, 'lockSeat']);
     Route::post('/bookings',              [BookingController::class, 'store']);
     Route::post('/bookings/pay',          [PaymentController::class, 'pay']);
+    Route::post('/bookings/{id}/cancel',   [BookingController::class, 'cancel']);
+    Route::post('/bookings/{id}/reschedule', [BookingController::class, 'reschedule']);
+    Route::put('/bookings/{id}/confirm-reschedule', [BookingController::class, 'confirmReschedule']);
     Route::get('/bookings/{id}',          [BookingController::class, 'show']);
 });
 
@@ -75,4 +78,4 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     // Airport management (admin only)
     // Route::post('/airports', [AirportController::class, 'store']);
 });
-
+
