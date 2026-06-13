@@ -24,7 +24,8 @@ class BookingController extends Controller
     private function autoCancelExpiredBookings(): void
     {
         Booking::where('status', 'pending')
-            ->where('created_at', '<=', now()->subMinutes(5))
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
             ->update(['status' => 'cancelled']);
     }
 
@@ -64,12 +65,27 @@ class BookingController extends Controller
 
             $createBookingForFlight = function ($flightId, $isReturn) use ($validated, $userId, $serviceData, $servicesTotal, $request, $tripType) {
                 $flight = Flight::findOrFail($flightId);
+                
+                // Lấy thời gian hết hạn từ ghế đầu tiên
+                $expiresAt = now()->addMinutes(15);
+                foreach ($validated['passengers'] as $passenger) {
+                    $seatId = $isReturn ? $passenger['return_seat_id'] : $passenger['outbound_seat_id'];
+                    if ($seatId) {
+                        $lockData = Cache::get("lock_flight_{$flightId}_seat_{$seatId}");
+                        if (is_array($lockData) && isset($lockData['expires_at'])) {
+                            $expiresAt = $lockData['expires_at'];
+                            break;
+                        }
+                    }
+                }
+
                 $booking = Booking::create([
                     'user_id' => $userId,
                     'flight_id' => $flightId,
                     'pnr_code' => strtoupper(Str::random(6)),
                     'total_amount' => 0, // Will sum up later
-                    'status' => 'pending'
+                    'status' => 'pending',
+                    'expires_at' => $expiresAt
                 ]);
 
                 $totalTicketAmount = 0;
@@ -79,9 +95,10 @@ class BookingController extends Controller
                     if (!$seatId) continue;
 
                     $cacheKey = "lock_flight_{$flightId}_seat_{$seatId}";
-                    $lockedBy = Cache::get($cacheKey);
+                    $lockData = Cache::get($cacheKey);
+                    $lockerId = is_array($lockData) ? $lockData['user_id'] : $lockData;
                     
-                    if ($lockedBy !== $userId) {
+                    if ($lockerId !== $userId) {
                         abort(400, "Ghế của chuyến bay đã hết thời gian giữ chỗ hoặc bạn chưa khóa ghế. Vui lòng chọn lại ghế.");
                     }
 
@@ -165,8 +182,12 @@ class BookingController extends Controller
             foreach ($seatIds as $seatId) {
                 $cacheKey = "lock_flight_{$flightId}_seat_{$seatId}";
                 
-                if (Cache::has($cacheKey) && Cache::get($cacheKey) !== $userId) {
-                    abort(400, "Một trong các ghế đã có người khác chọn.");
+                if (Cache::has($cacheKey)) {
+                    $lockData = Cache::get($cacheKey);
+                    $lockerId = is_array($lockData) ? $lockData['user_id'] : $lockData;
+                    if ($lockerId !== $userId) {
+                        abort(400, "Một trong các ghế đã có người khác chọn.");
+                    }
                 }
 
                 $isBought = Ticket::where('flight_id', $flightId)
@@ -179,7 +200,10 @@ class BookingController extends Controller
                     abort(400, "Một trong các ghế đã được bán.");
                 }
 
-                Cache::put($cacheKey, $userId, now()->addMinutes(5));
+                Cache::put($cacheKey, [
+                    'user_id' => $userId,
+                    'expires_at' => now()->addMinutes(15)
+                ], now()->addMinutes(15));
             }
         };
 
@@ -191,7 +215,7 @@ class BookingController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Đã khóa ghế trong 5 phút.',
+            'message' => 'Đã khóa ghế trong 15 phút.',
         ]);
     }
 
