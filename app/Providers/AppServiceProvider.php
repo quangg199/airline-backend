@@ -3,11 +3,15 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use App\Observers\BookingObserver;
+
 use App\Models\Booking;
+use App\Observers\BookingObserver;
 
 use App\Repositories\AirportRepository;
 use App\Repositories\Interfaces\AirportRepositoryInterface;
+
+use App\Repositories\BookingRepository;
+use App\Repositories\BookingRepositoryInterface;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -16,6 +20,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             AirportRepositoryInterface::class,
             AirportRepository::class
+        );
+
+        $this->app->bind(
+            BookingRepositoryInterface::class,
+            BookingRepository::class
         );
     }
 

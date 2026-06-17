@@ -12,7 +12,6 @@ class FlightAdminController extends Controller
     {
         $query = Flight::with(['departureAirport', 'arrivalAirport', 'aircraft']);
 
-        // SEARCH
         if ($request->filled('search')) {
             $search = $request->search;
 
@@ -22,7 +21,6 @@ class FlightAdminController extends Controller
             });
         }
 
-        // PAGINATION
         $flights = $query->orderByDesc('id')->paginate(10);
 
         return response()->json([
@@ -38,21 +36,56 @@ class FlightAdminController extends Controller
 
     public function store(Request $request)
     {
-        return Flight::create($request->all());
+        $data = $request->validate([
+            'flight_number' => 'required',
+            'departure_airport_id' => 'required',
+            'arrival_airport_id' => 'required',
+            'departure_time' => 'required',
+            'arrival_time' => 'required',
+            'aircraft_id' => 'required',
+            'base_price' => 'required|numeric',
+            'available_seats' => 'required|integer',
+            'status' => 'required',
+        ]);
+
+        $flight = Flight::create($data);
+
+        return response()->json([
+            'message' => 'Created successfully',
+            'data' => $flight
+        ], 201);
     }
 
     public function update(Request $request, $id)
     {
         $flight = Flight::findOrFail($id);
-        $flight->update($request->all());
 
-        return $flight;
+        $data = $request->validate([
+            'flight_number' => 'required',
+            'departure_airport_id' => 'required',
+            'arrival_airport_id' => 'required',
+            'departure_time' => 'required',
+            'arrival_time' => 'required',
+            'aircraft_id' => 'required',
+            'base_price' => 'required|numeric',
+            'available_seats' => 'required|integer',
+            'status' => 'required',
+        ]);
+
+        $flight->update($data);
+
+        return response()->json([
+            'message' => 'Updated successfully',
+            'data' => $flight
+        ]);
     }
 
     public function destroy($id)
     {
         Flight::findOrFail($id)->delete();
 
-        return response()->json(['message' => 'Deleted']);
+        return response()->json([
+            'message' => 'Deleted successfully'
+        ]);
     }
 }

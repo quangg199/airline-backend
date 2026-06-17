@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AirportController;
 use App\Http\Controllers\Api\FlightController;
 use App\Http\Controllers\Api\Admin\FlightAdminController;
+use App\Http\Controllers\Api\Admin\BookingAdminController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
@@ -64,24 +65,18 @@ Route::middleware(['auth:sanctum', 'role:admin'])
     ->prefix('admin')
     ->group(function () {
 
-        /*
-        |--------------------------------------------------------------------------
-        | Flight Management
-        |--------------------------------------------------------------------------
-        */
-
+        // FLIGHTS
         Route::get('/flights', [FlightAdminController::class, 'index']);
         Route::post('/flights', [FlightAdminController::class, 'store']);
         Route::put('/flights/{id}', [FlightAdminController::class, 'update']);
         Route::delete('/flights/{id}', [FlightAdminController::class, 'destroy']);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Airport Management
-        |--------------------------------------------------------------------------
-        */
+        // BOOKINGS (FIX FULL CRUD)
+        Route::get('/bookings', [BookingAdminController::class, 'index']);
+        Route::get('/bookings/{id}', [BookingAdminController::class, 'show']);
+        Route::delete('/bookings/{id}', [BookingAdminController::class, 'destroy']);
 
-        Route::post('/airports', [AirportController::class, 'store']);
-        Route::put('/airports/{id}', [AirportController::class, 'update']);
-        Route::delete('/airports/{id}', [AirportController::class, 'destroy']);
+        // (OPTIONAL nếu cần admin edit booking)
+        Route::put('/bookings/{id}', [BookingAdminController::class, 'update']);
+        Route::post('/bookings', [BookingAdminController::class, 'store']);
     });
