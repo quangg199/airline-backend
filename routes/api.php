@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings/pay',          [PaymentController::class, 'pay']);
     Route::post('/bookings/{id}/cancel',   [BookingController::class, 'cancel']);
     Route::post('/bookings/{id}/reschedule', [BookingController::class, 'reschedule']);
+    Route::post('/bookings/{id}/pay-reschedule', [PaymentController::class, 'payReschedule']);
     Route::put('/bookings/{id}/confirm-reschedule', [BookingController::class, 'confirmReschedule']);
     Route::get('/bookings/{id}',          [BookingController::class, 'show']);
 });
