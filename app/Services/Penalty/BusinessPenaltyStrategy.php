@@ -22,6 +22,14 @@ class BusinessPenaltyStrategy implements PenaltyStrategyInterface
 
     public function rescheduleFee(Booking $booking, Flight $newFlight): float
     {
-        return 0.0;
+        $oldFlight = $booking->flight;
+        $ticketsCount = $booking->tickets->count() ?: 1;
+
+        $oldBase = (float) $oldFlight->base_price;
+        $newBase = (float) $newFlight->base_price;
+
+        // Miễn phí đổi chuyến (0 VND phạt) nhưng vẫn phải trả chênh lệch giá vé nếu chuyến mới đắt hơn
+        $diff = max(0, ($newBase - $oldBase) * $ticketsCount);
+        return $diff;
     }
 }
