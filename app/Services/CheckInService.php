@@ -10,6 +10,7 @@ use App\Models\Payment;
 use Exception;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Str;
+use App\Contracts\CheckInServiceInterface;
 
 /**
  * CheckInService
@@ -21,7 +22,7 @@ use Illuminate\Support\Str;
  * - Tạo Boarding Pass với QR code
  * - Tạo bản ghi Check-in
  */
-class CheckInService
+class CheckInService implements CheckInServiceInterface
 {
     /**
      * Thực hiện Check-in cho hành khách
@@ -42,17 +43,22 @@ class CheckInService
      */
     public function checkIn(string $pnrCode, string $passengerName): array
     {
-        // 1. Tìm Booking theo PNR code
-        $booking = Booking::where('pnr_code', strtoupper($pnrCode))->first();
+        // 1. Tìm Booking theo PNR code (Eager Loading để tránh N+1 Query)
+        $booking = Booking::with([
+            'payment', 
+            'flight', 
+            'tickets' => function ($query) use ($passengerName) {
+                $query->where('passenger_name', 'LIKE', "%{$passengerName}%")
+                      ->with(['seat', 'boardingPass', 'checkIn']);
+            }
+        ])->where('pnr_code', strtoupper($pnrCode))->first();
         
         if (!$booking) {
             throw new Exception("Không tìm thấy mã đặt chỗ '{$pnrCode}'. Vui lòng kiểm tra lại.");
         }
 
-        // 2. Tìm Ticket theo tên hành khách
-        $ticket = $booking->tickets()
-            ->where('passenger_name', 'LIKE', "%{$passengerName}%")
-            ->first();
+        // 2. Tìm Ticket theo tên hành khách (từ collection đã eager load)
+        $ticket = $booking->tickets->first();
 
         if (!$ticket) {
             throw new Exception("Không tìm thấy hành khách tên '{$passengerName}' trong đơn đặt chỗ này.");
@@ -80,24 +86,8 @@ if ($ticket->checkIn) {
     throw new Exception("Hành khách đã check-in rồi.");
 }
 
-// TIME RULE
-$now = now();
-
-// đảm bảo Carbon (an toàn tuyệt đối)
-$departure = \Carbon\Carbon::parse($flight->departure_time);
-
-$checkInOpen = $departure->copy()->subHours(24);
-$checkInClose = $departure->copy()->subHours(2);
-
-if ($now->lt($checkInOpen)) {
-    throw new Exception(
-        "Check-in chưa mở. Mở vào: " . $checkInOpen->format('Y-m-d H:i')
-    );
-}
-
-if ($now->gt($checkInClose)) {
-    throw new Exception("Check-in đã đóng (trước giờ bay 2 tiếng).");
-}
+        // 5. Kiểm tra trạng thái chuyến bay bằng State Pattern
+        $flight->state()->validateCheckIn();
 
         // 6. Tạo BoardingPass nếu chưa có
         if (!$ticket->boardingPass) {
@@ -190,7 +180,8 @@ if ($now->gt($checkInClose)) {
      */
     public function hasCheckedIn(string $pnrCode, string $passengerName): bool
     {
-        $ticket = Ticket::whereHas('booking', function ($query) use ($pnrCode) {
+        $ticket = Ticket::with('checkIn')
+        ->whereHas('booking', function ($query) use ($pnrCode) {
             $query->where('pnr_code', strtoupper($pnrCode));
         })
         ->where('passenger_name', 'LIKE', "%{$passengerName}%")

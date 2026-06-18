@@ -20,9 +20,8 @@ class CheckInServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton('check-in-service', function () {
-            return new CheckInService();
-        });
+        $this->app->singleton(\App\Contracts\CheckInServiceInterface::class, \App\Services\CheckInService::class);
+        $this->app->alias(\App\Contracts\CheckInServiceInterface::class, 'check-in-service');
     }
 
     /**

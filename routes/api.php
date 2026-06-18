@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\CheckInController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +32,8 @@ Route::get('/airports', [AirportController::class, 'index']);
 Route::get('/flights',  [FlightController::class,  'index']);
 Route::get('/flights/{id}/seats', [FlightController::class, 'seats']);
 Route::get('/services', [ServiceController::class, 'index']);
+Route::post('/check-in', [CheckInController::class, 'processCheckIn']);
+Route::get('/check-in', [CheckInController::class, 'query']);
 
 // -------------------------------------------------------------------------
 // TIER 2: AUTHENTICATION ROUTES
