@@ -26,7 +26,7 @@ class CheckInFacade extends Facade
      */
     protected static function getFacadeAccessor()
     {
-        return 'check-in-service';
+        return \App\Contracts\CheckInServiceInterface::class;
     }
 
     /**

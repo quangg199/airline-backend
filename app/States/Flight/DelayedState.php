@@ -21,4 +21,18 @@ class DelayedState extends FlightState
     {
         return 'delayed';
     }
+
+    public function validateCheckIn(): void
+    {
+        $now = now();
+        $departure = \Carbon\Carbon::parse($this->flight->departure_time);
+        $checkInClose = $departure->copy()->subHours(2);
+
+        if ($now->gt($checkInClose)) {
+            throw new Exception("Check-in đã đóng (trước giờ bay 2 tiếng).");
+        }
+
+        // Chuyển sang check_in để bắt đầu/tiếp tục làm thủ tục
+        $this->flight->transitionTo('check_in');
+    }
 }

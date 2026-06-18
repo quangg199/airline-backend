@@ -33,6 +33,12 @@ class CheckInController extends Controller
     public function processCheckIn(Request $request): JsonResponse
     {
         try {
+            // Chuẩn hóa dữ liệu đầu vào
+            $request->merge([
+                'pnr_code' => strtoupper(trim($request->input('pnr_code', ''))),
+                'passenger_name' => trim($request->input('passenger_name', ''))
+            ]);
+
             // 1. Validate Input (PNR code, tên hành khách)
             $validated = $request->validate([
                 'pnr_code' => 'required|string|size:6',
@@ -75,6 +81,12 @@ class CheckInController extends Controller
     public function query(Request $request): JsonResponse
     {
         try {
+            // Chuẩn hóa dữ liệu đầu vào
+            $request->merge([
+                'pnr_code' => strtoupper(trim($request->input('pnr_code', ''))),
+                'passenger_name' => trim($request->input('passenger_name', ''))
+            ]);
+
             $validated = $request->validate([
                 'pnr_code' => 'required|string|size:6',
                 'passenger_name' => 'required|string|max:255',

@@ -20,4 +20,17 @@ class CheckInState extends FlightState
     {
         return 'check_in';
     }
+
+    public function validateCheckIn(): void
+    {
+        $now = now();
+        $departure = \Carbon\Carbon::parse($this->flight->departure_time);
+        $checkInClose = $departure->copy()->subHours(2);
+
+        if ($now->gt($checkInClose)) {
+            throw new Exception("Check-in đã đóng (trước giờ bay 2 tiếng).");
+        }
+
+        // Chuyến bay đã ở trạng thái check_in và thời gian vẫn hợp lệ, cho phép check-in.
+    }
 }
