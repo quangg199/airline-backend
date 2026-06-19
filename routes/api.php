@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\Admin\FlightAdminController;
 use App\Http\Controllers\Api\Admin\BookingAdminController;
 use App\Http\Controllers\Api\Admin\UserAdminController;
 use App\Http\Controllers\Api\Admin\ProfileController;
-use App\Http\Controllers\Api\CheckInController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
@@ -89,5 +88,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])
         Route::get('/users/{id}', [UserAdminController::class, 'show']);
         Route::post('/users', [UserAdminController::class, 'store']);
         Route::put('/users/{id}', [UserAdminController::class, 'update']);
+        Route::delete('/users/{id}', [UserAdminController::class, 'destroy']);
+    
         Route::delete('/users/{id}', [UserAdminController::class, 'destroy']);
     });
