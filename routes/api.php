@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\AirportController;
 use App\Http\Controllers\Api\FlightController;
 use App\Http\Controllers\Api\Admin\FlightAdminController;
 use App\Http\Controllers\Api\Admin\BookingAdminController;
+use App\Http\Controllers\Api\Admin\UserAdminController;
+use App\Http\Controllers\Api\Admin\ProfileController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
@@ -79,4 +81,12 @@ Route::middleware(['auth:sanctum', 'role:admin'])
         // (OPTIONAL nếu cần admin edit booking)
         Route::put('/bookings/{id}', [BookingAdminController::class, 'update']);
         Route::post('/bookings', [BookingAdminController::class, 'store']);
+
+
+        // USERS (QUẢN LÝ USER)
+        Route::get('/users', [UserAdminController::class, 'index']);
+        Route::get('/users/{id}', [UserAdminController::class, 'show']);
+        Route::post('/users', [UserAdminController::class, 'store']);
+        Route::put('/users/{id}', [UserAdminController::class, 'update']);
+        Route::delete('/users/{id}', [UserAdminController::class, 'destroy']);
     });
