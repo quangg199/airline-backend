@@ -67,28 +67,26 @@ Route::middleware(['auth:sanctum', 'role:admin'])
     ->prefix('admin')
     ->group(function () {
 
+        // PROFILE (FIX THIẾU ROUTE)
+        Route::get('/profile', [ProfileController::class, 'show']);
+
         // FLIGHTS
         Route::get('/flights', [FlightAdminController::class, 'index']);
         Route::post('/flights', [FlightAdminController::class, 'store']);
         Route::put('/flights/{id}', [FlightAdminController::class, 'update']);
         Route::delete('/flights/{id}', [FlightAdminController::class, 'destroy']);
 
-        // BOOKINGS (FIX FULL CRUD)
+        // BOOKINGS
         Route::get('/bookings', [BookingAdminController::class, 'index']);
         Route::get('/bookings/{id}', [BookingAdminController::class, 'show']);
+        Route::post('/bookings', [BookingAdminController::class, 'store']);
+        Route::put('/bookings/{id}', [BookingAdminController::class, 'update']);
         Route::delete('/bookings/{id}', [BookingAdminController::class, 'destroy']);
 
-        // (OPTIONAL nếu cần admin edit booking)
-        Route::put('/bookings/{id}', [BookingAdminController::class, 'update']);
-        Route::post('/bookings', [BookingAdminController::class, 'store']);
-
-
-        // USERS (QUẢN LÝ USER)
+        // USERS
         Route::get('/users', [UserAdminController::class, 'index']);
         Route::get('/users/{id}', [UserAdminController::class, 'show']);
         Route::post('/users', [UserAdminController::class, 'store']);
         Route::put('/users/{id}', [UserAdminController::class, 'update']);
-        Route::delete('/users/{id}', [UserAdminController::class, 'destroy']);
-    
         Route::delete('/users/{id}', [UserAdminController::class, 'destroy']);
     });

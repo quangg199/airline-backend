@@ -23,6 +23,7 @@ class AuthController extends Controller
             'email'           => $validated['email'],
             'password'        => Hash::make($validated['password']),
             'membership_tier' => 'standard',
+
         ]);
 
         $memberRole = Role::where('name', 'member')->first();
@@ -41,27 +42,30 @@ class AuthController extends Controller
     }
 
     public function login(LoginRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
+        {
+            $validated = $request->validated();
 
-        if (!Auth::attempt($validated)) {
+            if (!Auth::attempt($validated)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Sai email hoặc mật khẩu',
+                ], 401);
+            }
+
+            $user = User::with('roles')
+                ->where('email', $validated['email'])
+                ->firstOrFail();
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Sai email hoặc mật khẩu',
-            ], 401);
+                'status'       => 'success',
+                'user'         => $user,
+                'access_token' => $token,
+                'token_type'   => 'Bearer',
+            ]);
         }
-
-        $user = User::where('email', $validated['email'])->firstOrFail();
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'status'       => 'success',
-            'user'         => $user,
-            'access_token' => $token,
-            'token_type'   => 'Bearer',
-        ]);
-    }
+        
 
     public function me(Request $request): JsonResponse
     {
