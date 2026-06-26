@@ -76,6 +76,12 @@ Route::middleware(['auth:sanctum', 'role:admin'])
         Route::put('/flights/{id}', [FlightAdminController::class, 'update']);
         Route::delete('/flights/{id}', [FlightAdminController::class, 'destroy']);
 
+        //AirPorts
+        Route::get('/airports', [AirportController::class, 'index']);
+        Route::post('/airports', [AirportController::class, 'store']);
+        Route::put('/airports/{id}', [AirportController::class, 'update']);
+        Route::delete('/airports/{id}', [AirportController::class, 'destroy']);
+
         // BOOKINGS
         Route::get('/bookings', [BookingAdminController::class, 'index']);
         Route::get('/bookings/{id}', [BookingAdminController::class, 'show']);
