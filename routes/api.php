@@ -6,11 +6,13 @@ use App\Http\Controllers\Api\AirportController;
 use App\Http\Controllers\Api\FlightController;
 use App\Http\Controllers\Api\Admin\FlightAdminController;
 use App\Http\Controllers\Api\Admin\BookingAdminController;
+use App\Http\Controllers\Api\Admin\AirportAdminController;
 use App\Http\Controllers\Api\Admin\UserAdminController;
 use App\Http\Controllers\Api\Admin\ProfileController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\Admin\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,6 +69,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])
     ->prefix('admin')
     ->group(function () {
 
+        Route::get('/dashboard', [\App\Http\Controllers\Api\Admin\DashboardController::class, 'index']);
+
         // PROFILE (FIX THIẾU ROUTE)
         Route::get('/profile', [ProfileController::class, 'show']);
 
@@ -77,10 +81,10 @@ Route::middleware(['auth:sanctum', 'role:admin'])
         Route::delete('/flights/{id}', [FlightAdminController::class, 'destroy']);
 
         //AirPorts
-        Route::get('/airports', [AirportController::class, 'index']);
-        Route::post('/airports', [AirportController::class, 'store']);
-        Route::put('/airports/{id}', [AirportController::class, 'update']);
-        Route::delete('/airports/{id}', [AirportController::class, 'destroy']);
+        Route::get('/airports', [AirportAdminController::class, 'index']);
+        Route::post('/airports', [AirportAdminController::class, 'store']);
+        Route::put('/airports/{id}', [AirportAdminController::class, 'update']);
+        Route::delete('/airports/{id}', [AirportAdminController::class, 'destroy']);
 
         // BOOKINGS
         Route::get('/bookings', [BookingAdminController::class, 'index']);
