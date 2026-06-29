@@ -6,17 +6,12 @@ use App\Repositories\DashboardRepository;
 
 class DashboardService
 {
-    protected $repo;
-
-    public function __construct(DashboardRepository $repo)
-    {
-        $this->repo = $repo;
-    }
+    public function __construct(
+        protected DashboardRepository $repo
+    ) {}
 
     public function getDashboardData()
     {
-        $status = $this->repo->getFlightStatusSummary();
-
         return [
             'stats' => [
                 'totalFlights' => $this->repo->getTotalFlights(),
@@ -25,16 +20,10 @@ class DashboardService
                 'revenue' => $this->repo->getRevenue(),
             ],
 
+            'analytics' => $this->repo->getMonthlyBookings(),
+
             'recentBookings' => $this->repo->getRecentBookings(),
             'recentFlights' => $this->repo->getRecentFlights(),
-
-            'flightStatus' => [
-                'Scheduled' => $status['Scheduled'] ?? 0,
-                'Delayed' => $status['Delayed'] ?? 0,
-                'Cancelled' => $status['Cancelled'] ?? 0,
-            ],
-
-            'monthlyStats' => $this->repo->getMonthlyBookingStats(),
         ];
     }
 }

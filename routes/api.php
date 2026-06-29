@@ -69,7 +69,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])
     ->prefix('admin')
     ->group(function () {
 
-        Route::get('/dashboard', [\App\Http\Controllers\Api\Admin\DashboardController::class, 'index']);
+        Route::get('/dashboard', [DashboardController::class, 'index']);
 
         // PROFILE (FIX THIẾU ROUTE)
         Route::get('/profile', [ProfileController::class, 'show']);

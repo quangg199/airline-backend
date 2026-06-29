@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
@@ -6,14 +7,10 @@ use App\Services\DashboardService;
 
 class DashboardController extends Controller
 {
-    public function __construct(
-        protected DashboardService $service
-    ) {}
-
-    public function index()
+    public function index(DashboardService $service)
     {
         return response()->json(
-            $this->service->getDashboardData()
+            $service->getDashboardData()
         );
     }
 }

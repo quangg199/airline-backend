@@ -2,10 +2,10 @@
 
 namespace App\Repositories;
 
-use App\Models\Flight;
 use App\Models\Booking;
+use App\Models\Flight;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardRepository
 {
@@ -26,39 +26,50 @@ class DashboardRepository
 
     public function getRevenue()
     {
-        return Booking::sum('amount'); // giả sử có cột amount
+        return Booking::whereIn('status', ['paid', 'PAID', 'success', 'completed'])
+            ->sum('total_amount');
     }
 
-    public function getRecentBookings($limit = 5)
+    public function getMonthlyBookings()
     {
-        return Booking::with(['flight', 'user'])
+        $months = [];
+        $data = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $date = Carbon::now()->subMonths($i);
+
+            $months[] = $date->format('M');
+
+            $data[] = Booking::whereMonth('created_at', $date->month)
+                ->whereYear('created_at', $date->year)
+                ->count();
+        }
+
+        return [
+            'months' => $months,
+            'bookings' => $data,
+        ];
+    }
+
+    public function getRecentBookings()
+{
+    return Booking::with([
+        'user:id,name,email',
+        'flight:id,flight_number'
+    ])
+    ->latest()
+    ->take(5)
+    ->get();
+}
+
+    public function getRecentFlights()
+        {
+            return Flight::with([
+                'departureAirport:id,city,name,code',
+                'arrivalAirport:id,city,name,code'
+            ])
             ->latest()
-            ->take($limit)
+            ->take(5)
             ->get();
-    }
-
-    public function getRecentFlights($limit = 5)
-    {
-        return Flight::latest()
-            ->take($limit)
-            ->get();
-    }
-
-    public function getFlightStatusSummary()
-    {
-        return Flight::select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status');
-    }
-
-    public function getMonthlyBookingStats()
-    {
-        return Booking::select(
-                DB::raw('MONTH(created_at) as month'),
-                DB::raw('COUNT(*) as total')
-            )
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
-    }
+        }
 }
