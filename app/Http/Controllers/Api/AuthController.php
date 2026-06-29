@@ -14,14 +14,8 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    /**
-     * Đăng ký tài khoản mới
-     */
     public function register(RegisterRequest $request): JsonResponse
     {
-        // Validation is fully handled by RegisterRequest (Chain of Responsibility).
-        // $request->validated() returns only the fields that passed the rules —
-        // safe from mass-assignment attacks by design.
         $validated = $request->validated();
 
         $user = User::create([
@@ -29,9 +23,9 @@ class AuthController extends Controller
             'email'           => $validated['email'],
             'password'        => Hash::make($validated['password']),
             'membership_tier' => 'standard',
+
         ]);
 
-        // Assign the default 'member' role (Proxy Guard will use this for CheckRole middleware)
         $memberRole = Role::where('name', 'member')->first();
         if ($memberRole) {
             $user->roles()->attach($memberRole);
@@ -41,43 +35,38 @@ class AuthController extends Controller
 
         return response()->json([
             'status'       => 'success',
-            'message'      => 'Đăng ký tài khoản thành công.',
             'user'         => $user,
             'access_token' => $token,
             'token_type'   => 'Bearer',
         ], 201);
     }
 
-    /**
-     * Đăng nhập và lấy Token
-     */
     public function login(LoginRequest $request): JsonResponse
-    {
-        // LoginRequest has already validated the shape (email format, presence).
-        // Auth::attempt handles credential verification — these are separate concerns.
-        $validated = $request->validated();
+        {
+            $validated = $request->validated();
 
-        if (!Auth::attempt($validated)) {
+            if (!Auth::attempt($validated)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Sai email hoặc mật khẩu',
+                ], 401);
+            }
+
+            $user = User::with('roles')
+                ->where('email', $validated['email'])
+                ->firstOrFail();
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Email hoặc mật khẩu không chính xác.',
-            ], 401);
+                'status'       => 'success',
+                'user'         => $user,
+                'access_token' => $token,
+                'token_type'   => 'Bearer',
+            ]);
         }
+        
 
-        $user  = User::where('email', $validated['email'])->firstOrFail();
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'status'       => 'success',
-            'access_token' => $token,
-            'token_type'   => 'Bearer',
-            'user'         => $user,
-        ]);
-    }
-
-    /**
-     * Lấy thông tin user đang đăng nhập
-     */
     public function me(Request $request): JsonResponse
     {
         return response()->json([
@@ -86,17 +75,13 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Đăng xuất
-     */
     public function logout(Request $request): JsonResponse
     {
-        // Revoke only the current token (not all tokens — supports multi-device login)
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Đăng xuất thành công.',
+            'message' => 'Logged out',
         ]);
     }
 }

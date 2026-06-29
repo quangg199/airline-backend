@@ -1,85 +1,102 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AirportController;
 use App\Http\Controllers\Api\FlightController;
-use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Admin\FlightAdminController;
+use App\Http\Controllers\Api\Admin\BookingAdminController;
+use App\Http\Controllers\Api\Admin\AirportAdminController;
+use App\Http\Controllers\Api\Admin\UserAdminController;
+use App\Http\Controllers\Api\Admin\ProfileController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
-use App\Http\Controllers\Api\CheckInController;
+use App\Http\Controllers\Api\Admin\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
-| API Route Security Tiers
+| PUBLIC ROUTES
 |--------------------------------------------------------------------------
-|
-| TIER 1 — PUBLIC      : No authentication required.
-| TIER 2 — AUTH        : Authentication management endpoints (no token needed).
-| TIER 3 — MEMBER      : Requires valid Sanctum token (auth:sanctum).
-| TIER 4 — ADMIN       : Requires valid token + 'admin' role (auth:sanctum + role:admin).
-|
-| The CheckRole middleware (Protection Proxy) is always chained AFTER auth:sanctum.
-| Ordering matters: sanctum confirms identity, CheckRole confirms authorization.
-|
 */
 
-// -------------------------------------------------------------------------
-// TIER 1: PUBLIC ROUTES
-// No authentication. Safe for unauthenticated browsing.
-// -------------------------------------------------------------------------
 Route::get('/airports', [AirportController::class, 'index']);
-Route::get('/flights',  [FlightController::class,  'index']);
+Route::get('/flights', [FlightController::class, 'index']);
 Route::get('/flights/{id}/seats', [FlightController::class, 'seats']);
 Route::get('/services', [ServiceController::class, 'index']);
-Route::post('/check-in', [CheckInController::class, 'processCheckIn']);
-Route::get('/check-in', [CheckInController::class, 'query']);
 
-// -------------------------------------------------------------------------
-// TIER 2: AUTHENTICATION ROUTES
-// Open endpoints for identity management (register, login).
-// Logout and /me require a valid token — scoped separately inside.
-// -------------------------------------------------------------------------
+/*
+|--------------------------------------------------------------------------
+| AUTH ROUTES
+|--------------------------------------------------------------------------
+*/
+
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login',    [AuthController::class, 'login']);
 
-    // These two require a valid Sanctum token
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+
     Route::middleware('auth:sanctum')->group(function () {
+
         Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/me',      [AuthController::class, 'me']);
+        Route::get('/me', [AuthController::class, 'me']);
     });
 });
 
-// -------------------------------------------------------------------------
-// TIER 3: MEMBER-PROTECTED ROUTES
+/*
+|--------------------------------------------------------------------------
+| MEMBER ROUTES
+|--------------------------------------------------------------------------
+*/
+
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/bookings',               [BookingController::class, 'index']);
-    Route::post('/bookings/lock-seat',    [BookingController::class, 'lockSeat']);
-    Route::post('/bookings',              [BookingController::class, 'store']);
-    Route::post('/bookings/pay',          [PaymentController::class, 'pay']);
-    Route::post('/bookings/{id}/cancel',   [BookingController::class, 'cancel']);
-    Route::post('/bookings/{id}/reschedule', [BookingController::class, 'reschedule']);
-    Route::post('/bookings/{id}/pay-reschedule', [PaymentController::class, 'payReschedule']);
-    Route::put('/bookings/{id}/confirm-reschedule', [BookingController::class, 'confirmReschedule']);
-    Route::get('/bookings/{id}',          [BookingController::class, 'show']);
+
+    Route::get('/bookings', [BookingController::class, 'index']);
+    Route::get('/bookings/{id}', [BookingController::class, 'show']);
+
+    Route::post('/bookings/lock-seat', [BookingController::class, 'lockSeat']);
+    Route::post('/bookings', [BookingController::class, 'store']);
+    Route::post('/bookings/pay', [PaymentController::class, 'pay']);
 });
 
-// -------------------------------------------------------------------------
-// TIER 4: ADMIN-PROTECTED ROUTES
-// Requires: Valid Sanctum token AND the 'admin' role.
-// The CheckRole('admin') Protection Proxy guards all routes in this group.
-// Add admin-only endpoints here as the system grows.
-// -------------------------------------------------------------------------
-Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
-    // Flight management (admin only)
-    Route::get('/flights',          [FlightController::class, 'index']);
-    // Future admin endpoints will be added here:
-    // Route::post('/flights',      [FlightController::class, 'store']);
-    // Route::put('/flights/{id}',  [FlightController::class, 'update']);
-    // Route::delete('/flights/{id}', [FlightController::class, 'destroy']);
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES
+|--------------------------------------------------------------------------
+*/
 
-    // Airport management (admin only)
-    // Route::post('/airports', [AirportController::class, 'store']);
-});
+Route::middleware(['auth:sanctum', 'role:admin'])
+    ->prefix('admin')
+    ->group(function () {
 
+        Route::get('/dashboard', [DashboardController::class, 'index']);
+
+        // PROFILE (FIX THIẾU ROUTE)
+        Route::get('/profile', [ProfileController::class, 'show']);
+
+        // FLIGHTS
+        Route::get('/flights', [FlightAdminController::class, 'index']);
+        Route::post('/flights', [FlightAdminController::class, 'store']);
+        Route::put('/flights/{id}', [FlightAdminController::class, 'update']);
+        Route::delete('/flights/{id}', [FlightAdminController::class, 'destroy']);
+
+        //AirPorts
+        Route::get('/airports', [AirportAdminController::class, 'index']);
+        Route::post('/airports', [AirportAdminController::class, 'store']);
+        Route::put('/airports/{id}', [AirportAdminController::class, 'update']);
+        Route::delete('/airports/{id}', [AirportAdminController::class, 'destroy']);
+
+        // BOOKINGS
+        Route::get('/bookings', [BookingAdminController::class, 'index']);
+        Route::get('/bookings/{id}', [BookingAdminController::class, 'show']);
+        Route::post('/bookings', [BookingAdminController::class, 'store']);
+        Route::put('/bookings/{id}', [BookingAdminController::class, 'update']);
+        Route::delete('/bookings/{id}', [BookingAdminController::class, 'destroy']);
+
+        // USERS
+        Route::get('/users', [UserAdminController::class, 'index']);
+        Route::get('/users/{id}', [UserAdminController::class, 'show']);
+        Route::post('/users', [UserAdminController::class, 'store']);
+        Route::put('/users/{id}', [UserAdminController::class, 'update']);
+        Route::delete('/users/{id}', [UserAdminController::class, 'destroy']);
+    });
