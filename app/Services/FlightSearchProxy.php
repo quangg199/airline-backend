@@ -114,6 +114,14 @@ class FlightSearchProxy
             );
         }
 
+        // ── THÊM MỚI: Lọc bỏ các chuyến bay đã bay nếu ngày tìm là hôm nay ────────────
+        if ($date === now()->toDateString()) {
+            $now = now();
+            $flights = $flights->filter(function ($flight) use ($now) {
+                return \Carbon\Carbon::parse($flight->departure_time)->greaterThan($now);
+            })->values();
+        }
+
         // ── Bước 4: Áp dụng Pricing Strategy ────────────────────
         // PricingStrategyFactory resolve đúng strategy dựa trên trip_type.
         // Strategy tính display_price mà KHÔNG thay đổi base_price trong DB.
