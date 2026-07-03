@@ -143,7 +143,7 @@ class FlightController extends Controller
         $tripType = $request->query('trip_type', 'one_way');
         $strategy = \App\Services\Pricing\PricingStrategyFactory::resolve($tripType);
         
-        // Thử lấy user từ Sanctum token (do endpoint này public nên auth() có thể null)
+       
         if ($user = auth('sanctum')->user()) {
             if ($user->is_vip) {
                 $strategy = new \App\Services\Pricing\VipPricingDecorator($strategy);

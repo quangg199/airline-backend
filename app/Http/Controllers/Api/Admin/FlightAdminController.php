@@ -21,6 +21,10 @@ class FlightAdminController extends Controller
             });
         }
 
+        if ($request->filled('date')) {
+            $query->whereDate('departure_time', $request->date);
+        }
+
         $flights = $query->orderByDesc('id')->paginate(10);
 
         return response()->json([

@@ -118,9 +118,9 @@ class FlightGeneratorService
             // Sinh 3 hãng × 5 chuyến = 15 flights
             foreach (self::AIRLINE_SCHEDULES as $airline) {
                 foreach ($airline['baseNumbers'] as $idx => $baseNum) {
-                    // Mã chuyến bay: PREFIX + baseNum + "-" + MMDD
-                    // VD: VN201-0715, VJ301-0715, FB401-0715
-                    $flightNumber  = $airline['prefix'] . $baseNum . '-' . $dateSuffix;
+                    // Mã chuyến bay: PREFIX + baseNum (Không nối thêm ngày nữa)
+                    // VD: VN201, VJ301, FB401
+                    $flightNumber  = $airline['prefix'] . $baseNum;
                     $timeSlot      = $airline['slots'][$idx];
                     $departureTime = Carbon::parse("{$date} {$timeSlot}");
                     $arrivalTime   = $departureTime->copy()->addMinutes($airline['duration']);

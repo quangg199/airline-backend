@@ -21,6 +21,11 @@ class Flight extends Model
         'status'    
     ];
 
+    protected $casts = [
+        'departure_time' => 'datetime',
+        'arrival_time' => 'datetime',
+    ];
+
     public function departureAirport()
     {
         return $this->belongsTo(Airport::class, 'departure_airport_id');
