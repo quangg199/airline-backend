@@ -84,6 +84,14 @@ class BookingObserver
                 'qr_code_url' => $fileName,
                 'gate' => 'A1'
             ]);
+
+            // 5. Cập nhật hạng thành viên VIP (gold) nếu đủ 5 vé thương gia
+            if ($booking->user) {
+                $user = $booking->user;
+                if ($user->business_class_ticket_count >= 5 && $user->membership_tier !== 'gold') {
+                    $user->update(['membership_tier' => 'gold']);
+                }
+            }
         });
     }
 }

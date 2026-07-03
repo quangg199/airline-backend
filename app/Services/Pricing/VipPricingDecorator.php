@@ -7,7 +7,7 @@ use App\Contracts\PricingStrategyInterface;
 /**
  * VipPricingDecorator (Decorator Pattern — Structural)
  *
- * Mở rộng động quy tắc tính giá bằng cách bọc (wrap) quanh một 
+ * Mở rộng quy tắc tính giá bằng cách bọc (wrap) quanh một 
  * PricingStrategyInterface bất kỳ (VD: OneWay hoặc RoundTrip).
  *
  * Vấn đề: 

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\CheckInController;
+use App\Http\Controllers\Api\UserProfileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,12 +55,22 @@ Route::prefix('auth')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
 
+    // PROFILE
+    Route::put('/profile', [UserProfileController::class, 'updateProfile']);
+
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::get('/bookings/{id}', [BookingController::class, 'show']);
 
     Route::post('/bookings/lock-seat', [BookingController::class, 'lockSeat']);
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::post('/bookings/pay', [PaymentController::class, 'pay']);
+    
+    // API cho chức năng Đổi chuyến bay
+    Route::post('/bookings/{id}/reschedule', [BookingController::class, 'reschedule']);
+    Route::post('/bookings/{id}/pay-reschedule', [PaymentController::class, 'payReschedule']);
+    
+    // API cho chức năng Hủy vé
+    Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
 });
 
 /*
